@@ -28,11 +28,48 @@ async function getAllArticles() {
     }
 }
 
+async function getArticleById(id) {
+    const SQL_SELECT_ARTICLE_BY_ID = `SELECT * FROM articles WHERE _id = '${id}'`
+    try {
+        const result = await pool.query(SQL_SELECT_ARTICLE_BY_ID);
+        return result.rows;
+    } catch (err) {
+        console.error("Get article by id SQL error:", err);
+        throw err;
+    } finally {
+    }
+}
+
+async function getArticleByTitle(searchValue) {
+    const SQL_SELECT_ARTICLE_BY_TITLE = `SELECT * FROM articles WHERE title ILIKE '%${searchValue}%'`
+    try {
+        const result = await pool.query(SQL_SELECT_ARTICLE_BY_TITLE);
+        return result.rows;
+    } catch (err) {
+        console.error("Get article by title SQL error:", err);
+        throw err;
+    } finally {
+    }
+}
+
+async function getArticleByTitleOrName(searchValue) {
+    const SQL_SELECT_ARTICLE_BY_TITLE = `SELECT * FROM articles WHERE title ILIKE '%${searchValue}%' or content ILIKE '%${searchValue}%'`
+    try {
+        const result = await pool.query(SQL_SELECT_ARTICLE_BY_TITLE);
+        return result.rows;
+    } catch (err) {
+        console.error("Get article by title or content SQL error:", err);
+        throw err;
+    } finally {
+    }
+}
+
 async function postArticle(article) {
+    const content = article.content.replaceAll("'", "''")
     const query = `INSERT INTO articles(title, content, _created, "group", "subGroup", "order", "imageUrls",
                                         "ignoreHtml", done, _changed, _createdby, _changedby, _version)
                    VALUES ('${article.title}',
-                           '${article.content ?? ""}',
+                           '${content ?? ""}',
                            '${article._created ?? new Date(Date.now()).toISOString()}',
                            '${article.group}',
                            '${article.subGroup}',
@@ -56,9 +93,10 @@ async function postArticle(article) {
 }
 
 async function updateArticle(article) {
+    const content = article.content.replaceAll("'", "''")
     const query = `UPDATE articles
                    SET title        = '${article.title}',
-                       content      = '${article.content ?? ""}',
+                       content      = '${content ?? ""}',
                        "group"      ='${article.group}',
                        "subGroup"   = '${article.subGroup}',
                        "ignoreHtml" = ${article.ignoreHtml ?? false},
@@ -100,6 +138,46 @@ app.get("/rest/articles", (req, res) => {
         })
         .catch(error => {
             console.error("Get all articles error", error);
+        })
+        .finally(() => {
+        });
+});
+
+app.get("/rest/articlebyid/:id", jsonParser, (req, res) => {
+    const articleId = req.params.id;
+    getArticleById(articleId)
+        .then(data => {
+            res.json(data);
+        })
+        .catch(error => {
+            console.error("Get article by id error", error);
+        })
+        .finally(() => {
+        });
+});
+
+
+app.get("/rest/searcharticlebyname/:value", jsonParser, (req, res) => {
+    const searchValue = req.params.value;
+    getArticleByTitle(searchValue)
+        .then(data => {
+            res.json(data);
+        })
+        .catch(error => {
+            console.error("Get article by title error", error);
+        })
+        .finally(() => {
+        });
+});
+
+app.get("/rest/searcharticlebynameorcontent/:value", jsonParser, (req, res) => {
+    const searchValue = req.params.value;
+    getArticleByTitleOrName(searchValue)
+        .then(data => {
+            res.json(data);
+        })
+        .catch(error => {
+            console.error("Get article by title or content error", error);
         })
         .finally(() => {
         });
